@@ -41,14 +41,14 @@ public class SecurityConfiguration {
             .and()
             .authorizeRequests()
 
-            // ✅ Public URLs
+            //  Public URLs
             .antMatchers("/", "/login", "/register", "/newuserregister").permitAll()
             .antMatchers("/css/**", "/js/**", "/images/**").permitAll()
 
-            // ✅ Admin URLs
+            //  Admin URLs
             .antMatchers("/admin/**").hasRole("ADMIN")
 
-            // ✅ User URLs (ONLY user paths)
+            // User URLs (ONLY user paths)
             .antMatchers("/user/**", "/profileDisplay", "/buy").hasRole("NORMAL")
 
             // everything else requires authentication
