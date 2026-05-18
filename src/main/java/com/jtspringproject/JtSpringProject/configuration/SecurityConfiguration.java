@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 import com.jtspringproject.JtSpringProject.services.CustomUserDetailService;
@@ -15,21 +15,19 @@ import com.jtspringproject.JtSpringProject.services.CustomUserDetailService;
 public class SecurityConfiguration {
 
     private final CustomUserDetailService customUserDetailService;
+    private final PasswordEncoder passwordEncoder;
 
-    public SecurityConfiguration(CustomUserDetailService customUserDetailService) {
+    public SecurityConfiguration(CustomUserDetailService customUserDetailService,
+                                PasswordEncoder passwordEncoder) {
         this.customUserDetailService = customUserDetailService;
-    }
-
-    @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
         authProvider.setUserDetailsService(customUserDetailService);
-        authProvider.setPasswordEncoder(passwordEncoder());
+        authProvider.setPasswordEncoder(passwordEncoder);
         return authProvider;
     }
 
@@ -40,18 +38,10 @@ public class SecurityConfiguration {
             .csrf()
             .and()
             .authorizeRequests()
-
-            //  Public URLs
             .antMatchers("/", "/login", "/register", "/newuserregister").permitAll()
             .antMatchers("/css/**", "/js/**", "/images/**").permitAll()
-
-            //  Admin URLs
             .antMatchers("/admin/**").hasRole("ADMIN")
-
-            // User URLs (ONLY user paths)
             .antMatchers("/user/**", "/profileDisplay", "/buy").hasRole("NORMAL")
-
-            // everything else requires authentication
             .anyRequest().authenticated()
 
             .and()
