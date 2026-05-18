@@ -2,100 +2,72 @@ package com.jtspringproject.JtSpringProject.configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.annotation.Order;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
-import com.jtspringproject.JtSpringProject.models.User;
-import com.jtspringproject.JtSpringProject.services.userService;
+import com.jtspringproject.JtSpringProject.services.CustomUserDetailService;
 
 @Configuration
+@EnableWebSecurity
 public class SecurityConfiguration {
 
-	private final userService userService;
+    private final CustomUserDetailService customUserDetailService;
 
-	public SecurityConfiguration(userService userService) {
-		this.userService = userService;
-	}
+    public SecurityConfiguration(CustomUserDetailService customUserDetailService) {
+        this.customUserDetailService = customUserDetailService;
+    }
 
-	@Configuration
-	@Order(1)
-	public static class AdminConfigurationAdapter {
+    @Bean
+    public BCryptPasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
 
-		@Bean
-		SecurityFilterChain adminFilterChain(HttpSecurity http) throws Exception {
-			http.antMatcher("/admin/**")
-					.authorizeHttpRequests(requests -> requests
-							.requestMatchers(new AntPathRequestMatcher("/admin/login")).permitAll()
-							.requestMatchers(new AntPathRequestMatcher("/admin/**")).hasRole("ADMIN"))
-					.formLogin(login -> login
-							.loginPage("/admin/login")
-							.loginProcessingUrl("/admin/loginvalidate")
-							.successHandler((request, response, authentication) -> {
-								response.sendRedirect("/admin/");
-							})
-							.failureHandler((request, response, exception) -> {
-								response.sendRedirect("/admin/login?error=true");
-							}))
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(customUserDetailService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
 
-					// Keep GET logout to remain compatible with existing logout anchor links.
-					.logout(logout -> logout.logoutRequestMatcher(new AntPathRequestMatcher("/admin/logout", "GET"))
-							.logoutSuccessUrl("/admin/login")
-							.deleteCookies("JSESSIONID"))
-					.exceptionHandling(exception -> exception
-							.accessDeniedPage("/403"));
-			return http.build();
-		}
-	}
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-	@Configuration
-	@Order(2)
-	public static class UserConfigurationAdapter {
+        http
+            .csrf()
+            .and()
+            .authorizeRequests()
 
-		@Bean
-		SecurityFilterChain userFilterChain(HttpSecurity http) throws Exception {
-			http.authorizeHttpRequests(requests -> requests
-					.antMatchers("/login", "/register", "/newuserregister").permitAll()
-					.antMatchers("/**").hasRole("USER"))
-					.formLogin(login -> login
-							.loginPage("/login")
-							.loginProcessingUrl("/userloginvalidate")
-							.successHandler((request, response, authentication) -> {
-								response.sendRedirect("/");
-							})
-							.failureHandler((request, response, exception) -> {
-								response.sendRedirect("/login?error=true");
-							}))
+            // ✅ Public URLs
+            .antMatchers("/", "/login", "/register", "/newuserregister").permitAll()
+            .antMatchers("/css/**", "/js/**", "/images/**").permitAll()
 
-					// Keep GET logout to remain compatible with existing logout anchor links.
-					.logout(logout -> logout.logoutRequestMatcher(new AntPathRequestMatcher("/logout", "GET"))
-							.logoutSuccessUrl("/login")
-							.deleteCookies("JSESSIONID"))
-					.exceptionHandling(exception -> exception
-							.accessDeniedPage("/403"));
-			return http.build();
-		}
-	}
+            // ✅ Admin URLs
+            .antMatchers("/admin/**").hasRole("ADMIN")
 
-	@Bean
-	UserDetailsService userDetailsService() {
-		return username -> {
-			User user = userService.getUserByUsername(username);
-			if (user == null) {
-				throw new UsernameNotFoundException("User with username " + username + " not found.");
-			}
-			String role = "ROLE_ADMIN".equals(user.getRole()) ? "ADMIN" : "USER";
+            // ✅ User URLs (ONLY user paths)
+            .antMatchers("/user/**", "/profileDisplay", "/buy").hasRole("NORMAL")
 
-			return org.springframework.security.core.userdetails.User
-					.withUsername(username)
-					.password(user.getPassword())
-					.roles(role)
-					.build();
-		};
-	}
+            // everything else requires authentication
+            .anyRequest().authenticated()
 
+            .and()
+            .formLogin()
+                .loginPage("/login")
+                .loginProcessingUrl("/userloginvalidate")
+                .defaultSuccessUrl("/", true)
+                .failureUrl("/login?error=true")
+                .permitAll()
 
+            .and()
+            .logout()
+                .logoutUrl("/logout")
+                .logoutSuccessUrl("/login")
+                .permitAll();
+
+        return http.build();
+    }
 }
