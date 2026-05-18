@@ -26,193 +26,209 @@ import com.jtspringproject.JtSpringProject.services.userService;
 @RequestMapping("/admin")
 public class AdminController {
 
-	private final userService userService;
-	private final categoryService categoryService;
-	private final productService productService;
-	private static final String REDIRECT_ADMIN_PRODUCTS = "redirect:/admin/products";
-	private static final String REDIRECT_ADMIN_CATEGORIES = "redirect:/admin/categories";
-	private static final String VIEW_CATEGORIES = "categories";
+    private final userService userService;
+    private final categoryService categoryService;
+    private final productService productService;
 
-	@Autowired
-	public AdminController(userService userService, categoryService categoryService, productService productService) {
-		this.userService = userService;
-		this.categoryService = categoryService;
-		this.productService = productService;
-	}
+    private static final String REDIRECT_ADMIN_PRODUCTS = "redirect:/admin/products";
+    private static final String REDIRECT_ADMIN_CATEGORIES = "redirect:/admin/categories";
+    private static final String VIEW_CATEGORIES = "categories";
 
-	@GetMapping("/index")
-	public String index(Model model) {
-		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		model.addAttribute("username", username);
-		return "index";
-	}
+    @Autowired
+    public AdminController(userService userService, categoryService categoryService, productService productService) {
+        this.userService = userService;
+        this.categoryService = categoryService;
+        this.productService = productService;
+    }
 
-	@GetMapping("login")
-	public ModelAndView adminLogin(@RequestParam(required = false) String error) {
-		ModelAndView mv = new ModelAndView("adminlogin");
-		if ("true".equals(error)) {
-			mv.addObject("msg", "Invalid username or password. Please try again.");
-		}
-		return mv;
-	}
+    @GetMapping("/index")
+    public String index(Model model) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        model.addAttribute("username", username);
+        return "index";
+    }
 
-	@GetMapping(value = { "/", "Dashboard" })
-	public ModelAndView adminHome() {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		ModelAndView mv = new ModelAndView("adminHome");
-		mv.addObject("admin", authentication.getName());
-		return mv;
-	}
+    // ✅ Admin Login Page URL: /admin/login
+    @GetMapping("/login")
+    public ModelAndView adminLogin(@RequestParam(required = false) String error) {
+        ModelAndView mv = new ModelAndView("adminlogin");
+        if ("true".equals(error)) {
+            mv.addObject("msg", "Invalid username or password. Please try again.");
+        }
+        return mv;
+    }
 
-	@GetMapping("categories")
-	public ModelAndView getCategories() {
-		ModelAndView mView = new ModelAndView(VIEW_CATEGORIES);
-		List<Category> categories = this.categoryService.getCategories();
-		mView.addObject(VIEW_CATEGORIES, categories);
-		return mView;
-	}
+    @GetMapping(value = { "/", "/Dashboard" })
+    public ModelAndView adminHome() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        ModelAndView mv = new ModelAndView("adminHome");
+        mv.addObject("admin", authentication.getName());
+        return mv;
+    }
 
-	@PostMapping("/categories")
-	public String addCategory(@RequestParam("categoryname") String categoryName) {
-		this.categoryService.addCategory(categoryName);
-		return "redirect:categories";
-	}
+    @GetMapping("/categories")
+    public ModelAndView getCategories() {
+        ModelAndView mView = new ModelAndView(VIEW_CATEGORIES);
+        List<Category> categories = this.categoryService.getCategories();
+        mView.addObject(VIEW_CATEGORIES, categories);
+        return mView;
+    }
 
-	@PostMapping("categories/delete")
-	public String deleteCategory(@RequestParam("id") int id) {
-		this.categoryService.deleteCategory(id);
-		return REDIRECT_ADMIN_CATEGORIES;
-	}
+    @PostMapping("/categories")
+    public String addCategory(@RequestParam("categoryname") String categoryName) {
+        this.categoryService.addCategory(categoryName);
+        return "redirect:/admin/categories";
+    }
 
-	@PostMapping("categories/update")
-	public String updateCategory(@RequestParam("categoryid") int id,
-			@RequestParam("categoryname") String categoryname) {
-		this.categoryService.updateCategory(id, categoryname);
-		return REDIRECT_ADMIN_CATEGORIES;
-	}
+    @PostMapping("/categories/delete")
+    public String deleteCategory(@RequestParam("id") int id) {
+        this.categoryService.deleteCategory(id);
+        return REDIRECT_ADMIN_CATEGORIES;
+    }
 
-	@GetMapping("products")
-	public ModelAndView getProducts() {
-		ModelAndView mView = new ModelAndView("products");
+    @PostMapping("/categories/update")
+    public String updateCategory(@RequestParam("categoryid") int id,
+                                 @RequestParam("categoryname") String categoryname) {
+        this.categoryService.updateCategory(id, categoryname);
+        return REDIRECT_ADMIN_CATEGORIES;
+    }
 
-		List<Product> products = this.productService.getProducts();
+    @GetMapping("/products")
+    public ModelAndView getProducts() {
+        ModelAndView mView = new ModelAndView("products");
 
-		if (products.isEmpty()) {
-			mView.addObject("msg", "No products are available");
-		} else {
-			mView.addObject("products", products);
-		}
-		return mView;
-	}
+        List<Product> products = this.productService.getProducts();
 
-	@GetMapping("products/add")
-	public ModelAndView addProduct() {
-		ModelAndView mView = new ModelAndView("productsAdd");
-		List<Category> categories = this.categoryService.getCategories();
-		mView.addObject(VIEW_CATEGORIES, categories);
-		return mView;
-	}
+        if (products.isEmpty()) {
+            mView.addObject("msg", "No products are available");
+        } else {
+            mView.addObject("products", products);
+        }
+        return mView;
+    }
 
-	@PostMapping("products/add")
-	public String addProduct(@RequestParam("name") String name, @RequestParam("categoryid") int categoryId,
-			@RequestParam("price") int price, @RequestParam("weight") int weight,
-			@RequestParam("quantity") int quantity, @RequestParam("description") String description,
-			@RequestParam("productImage") String productImage) {
-		Product product = buildProduct(name, categoryId, price, weight, quantity, description, productImage);
-		this.productService.addProduct(product);
-		return REDIRECT_ADMIN_PRODUCTS;
-	}
+    @GetMapping("/products/add")
+    public ModelAndView addProduct() {
+        ModelAndView mView = new ModelAndView("productsAdd");
+        List<Category> categories = this.categoryService.getCategories();
+        mView.addObject(VIEW_CATEGORIES, categories);
+        return mView;
+    }
 
-	@GetMapping("products/update/{id}")
-	public ModelAndView getUpdateProductPage(@PathVariable("id") int id) {
+    @PostMapping("/products/add")
+    public String addProduct(@RequestParam("name") String name,
+                             @RequestParam("categoryid") int categoryId,
+                             @RequestParam("price") int price,
+                             @RequestParam("weight") int weight,
+                             @RequestParam("quantity") int quantity,
+                             @RequestParam("description") String description,
+                             @RequestParam("productImage") String productImage) {
 
-		ModelAndView mView = new ModelAndView("productsUpdate");
-		Product product = this.productService.getProduct(id);
-		List<Category> categories = this.categoryService.getCategories();
+        Product product = buildProduct(name, categoryId, price, weight, quantity, description, productImage);
+        this.productService.addProduct(product);
+        return REDIRECT_ADMIN_PRODUCTS;
+    }
 
-		mView.addObject(VIEW_CATEGORIES, categories);
-		mView.addObject("product", product);
-		return mView;
-	}
+    @GetMapping("/products/update/{id}")
+    public ModelAndView getUpdateProductPage(@PathVariable("id") int id) {
 
-	@PostMapping("products/update/{id}")
-	public String updateProduct(@PathVariable("id") int id, @RequestParam("name") String name,
-			@RequestParam("categoryid") int categoryId, @RequestParam("price") int price,
-			@RequestParam("weight") int weight, @RequestParam("quantity") int quantity,
-			@RequestParam("description") String description, @RequestParam("productImage") String productImage) {
-		Product product = buildProduct(name, categoryId, price, weight, quantity, description, productImage);
-		this.productService.updateProduct(id, product);
-		return REDIRECT_ADMIN_PRODUCTS;
-	}
+        ModelAndView mView = new ModelAndView("productsUpdate");
+        Product product = this.productService.getProduct(id);
+        List<Category> categories = this.categoryService.getCategories();
 
-	@PostMapping("products/delete")
-	public String removeProduct(@RequestParam("id") int id) {
-		this.productService.deleteProduct(id);
-		return REDIRECT_ADMIN_PRODUCTS;
-	}
+        mView.addObject(VIEW_CATEGORIES, categories);
+        mView.addObject("product", product);
+        return mView;
+    }
 
-	@PostMapping("products")
-	public String redirectProductsPost() {
-		return REDIRECT_ADMIN_CATEGORIES;
-	}
+    @PostMapping("/products/update/{id}")
+    public String updateProduct(@PathVariable("id") int id,
+                                @RequestParam("name") String name,
+                                @RequestParam("categoryid") int categoryId,
+                                @RequestParam("price") int price,
+                                @RequestParam("weight") int weight,
+                                @RequestParam("quantity") int quantity,
+                                @RequestParam("description") String description,
+                                @RequestParam("productImage") String productImage) {
 
-	@GetMapping("customers")
-	public ModelAndView getCustomerDetail() {
-		ModelAndView mView = new ModelAndView("displayCustomers");
-		List<User> users = this.userService.getUsers();
-		mView.addObject("customers", users);
-		return mView;
-	}
+        Product product = buildProduct(name, categoryId, price, weight, quantity, description, productImage);
+        this.productService.updateProduct(id, product);
+        return REDIRECT_ADMIN_PRODUCTS;
+    }
 
-	@GetMapping("profileDisplay")
-	public String profileDisplay(Model model) {
-		String username = SecurityContextHolder.getContext().getAuthentication().getName();
-		User user = this.userService.getUserByUsername(username);
+    @PostMapping("/products/delete")
+    public String removeProduct(@RequestParam("id") int id) {
+        this.productService.deleteProduct(id);
+        return REDIRECT_ADMIN_PRODUCTS;
+    }
 
-		if (user != null) {
-			model.addAttribute("userid", user.getId());
-			model.addAttribute("username", user.getUsername());
-			model.addAttribute("email", user.getEmail());
-			model.addAttribute("password", "");
-			model.addAttribute("address", user.getAddress());
-		} else {
-			model.addAttribute("msg", "User not found");
-		}
-		return "updateProfile";
-	}
+    @PostMapping("/products")
+    public String redirectProductsPost() {
+        return REDIRECT_ADMIN_CATEGORIES;
+    }
 
-	@PostMapping("updateuser")
-	public String updateUserProfile(@RequestParam("userid") int userid, @RequestParam("username") String username,
-			@RequestParam("email") String email, @RequestParam("password") String password,
-			@RequestParam("address") String address) {
-		User updatedUser = this.userService.updateUserProfile(userid, username, email, password, address);
-		if (updatedUser != null) {
-			refreshAuthenticatedPrincipal(username);
-		}
-		return "redirect:index";
-	}
+    @GetMapping("/customers")
+    public ModelAndView getCustomerDetail() {
+        ModelAndView mView = new ModelAndView("displayCustomers");
+        List<User> users = this.userService.getUsers();
+        mView.addObject("customers", users);
+        return mView;
+    }
 
-	private void refreshAuthenticatedPrincipal(String username) {
-		Authentication currentAuthentication = SecurityContextHolder.getContext().getAuthentication();
-		Authentication newAuthentication = new UsernamePasswordAuthenticationToken(
-				username,
-				currentAuthentication.getCredentials(),
-				currentAuthentication.getAuthorities());
-		SecurityContextHolder.getContext().setAuthentication(newAuthentication);
-	}
+    @GetMapping("/profileDisplay")
+    public String profileDisplay(Model model) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = this.userService.getUserByUsername(username);
 
-	private Product buildProduct(String name, int categoryId, int price, int weight, int quantity,
-			String description, String productImage) {
-		Category category = this.categoryService.getCategory(categoryId);
-		Product product = new Product();
-		product.setName(name);
-		product.setCategory(category);
-		product.setDescription(description);
-		product.setPrice(price);
-		product.setImage(productImage);
-		product.setWeight(weight);
-		product.setQuantity(quantity);
-		return product;
-	}
+        if (user != null) {
+            model.addAttribute("userid", user.getId());
+            model.addAttribute("username", user.getUsername());
+            model.addAttribute("email", user.getEmail());
+            model.addAttribute("password", "");
+            model.addAttribute("address", user.getAddress());
+        } else {
+            model.addAttribute("msg", "User not found");
+        }
+        return "updateProfile";
+    }
 
+    @PostMapping("/updateuser")
+    public String updateUserProfile(@RequestParam("userid") int userid,
+                                    @RequestParam("username") String username,
+                                    @RequestParam("email") String email,
+                                    @RequestParam("password") String password,
+                                    @RequestParam("address") String address) {
+
+        User updatedUser = this.userService.updateUserProfile(userid, username, email, password, address);
+        if (updatedUser != null) {
+            refreshAuthenticatedPrincipal(username);
+        }
+        return "redirect:/admin/index";
+    }
+
+    private void refreshAuthenticatedPrincipal(String username) {
+        Authentication currentAuthentication = SecurityContextHolder.getContext().getAuthentication();
+        Authentication newAuthentication = new UsernamePasswordAuthenticationToken(
+                username,
+                currentAuthentication.getCredentials(),
+                currentAuthentication.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(newAuthentication);
+    }
+
+    private Product buildProduct(String name, int categoryId, int price, int weight, int quantity,
+                                 String description, String productImage) {
+
+        Category category = this.categoryService.getCategory(categoryId);
+
+        Product product = new Product();
+        product.setName(name);
+        product.setCategory(category);
+        product.setDescription(description);
+        product.setPrice(price);
+        product.setImage(productImage);
+        product.setWeight(weight);
+        product.setQuantity(quantity);
+
+        return product;
+    }
 }
